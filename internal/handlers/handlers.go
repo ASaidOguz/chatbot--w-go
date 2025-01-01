@@ -50,6 +50,7 @@ type WsJsonResponse struct {
 	MessageType string `json:"message_type"`
 }
 
+// WsPayload is a struct that represents a payload from a websocket connection.
 type WsPayload struct {
 	Action   string              `json:"action"`
 	UserName string              `json:"username"`
@@ -57,7 +58,7 @@ type WsPayload struct {
 	Conn     WebSocketConnection `json:"-"`
 }
 
-// WsEndPoint is a http.HandlerFunc that upgrades a HTTP connection to a websocket connection.
+// WsEndPoint is a http.HandlerFunc that upgrades a HTTP connection to a websocket connection.(public function)
 func WsEndPoint(w http.ResponseWriter, r *http.Request) {
 	ws, err := UpgradeConnection.Upgrade(w, r, nil)
 	if err != nil {
@@ -102,6 +103,7 @@ func listenForWs(conn *WebSocketConnection) {
 	}
 }
 
+// ListenToWsChannel is a function that listens for incoming messages from the wsChan channel.(public function)
 func ListenToWsChannel() {
 	var response WsJsonResponse
 
@@ -113,6 +115,7 @@ func ListenToWsChannel() {
 	}
 }
 
+// broadcastToAll is a function that sends a message to all connected clients.(private function)
 func broadcastToAll(response WsJsonResponse) {
 	for client := range clients {
 		err := client.WriteJSON(response)
