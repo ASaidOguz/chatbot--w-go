@@ -7,6 +7,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
      rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" 
      crossorigin="anonymous">
+     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/notie/4.3.1/notie.min.css" integrity="sha512-UrjLcAek5jbj1vwGbXkviPHtgSNVNQCedX7cBIMDdSI2iZtUcZcoTh2Sqc8R9mVcijOjFUi1IlxhfrE1uWaIog==" 
+     crossorigin="anonymous" referrerpolicy="no-referrer" />
      <style>
         .chatbox {
          outline: 1px solid silver;
@@ -16,7 +18,7 @@
      </style>
 </head>
 <body>
-   
+  
     <div class="container">
         <div class="row">
             <div class="col">
@@ -28,7 +30,7 @@
             <!-- Chat Section -->
             <div class="col-md-8">
                 <h3>Chat</h3>
-
+                <a href="http://github.com">Github</a>
                 <div class="form-group">
                     <label for="username">Username:</label>
                     <input type="text"  name="username" id="username"  class="form-control" autocomplete="off">
@@ -38,6 +40,8 @@
                     <label for="message">Message:</label>
                     <input type="text"  name="message" id="message"  class="form-control" autocomplete="off">
                 </div>
+                <hr>
+                <a href="javascript:void(0);" class="btn btn-outline-secondary" id="sendBtn">Send</a>
                 <input type="hidden" name="action" id="action">
                 <hr>
                 <div id="output" class="chatbox"></div>
@@ -46,7 +50,9 @@
             <!-- Users Section -->
             <div class="col-md-4">
                 <h3>Users</h3>
-                <div id="users-list"></div>
+                <ul id="online_users">
+
+                </ul>
             </div>
         </div>
     </div>
@@ -54,11 +60,27 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" 
 integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" 
 crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/notie/4.3.1/notie.min.js" 
+integrity="sha512-NHRCwRf2LnVSlLDejCA9oS3fG3/FLSQIPCjAWl3M7tVi5wszwr6FxkjotWnQDXLE+aLKcxRrzFDNEgXj9nvkPw==" 
+crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="/static/reconnecting-websocket.min.js"></script>
 <script>
+    // Websocket connection and message handling.
     let socket = null;
-
+    let output = document.getElementById('output');
+    let message = document.getElementById('message');
+    let username = document.getElementById('username');
+    
+    // When the user leaves the page.
+    window.onbeforeunload = function(){
+        console.log("Leaving the page");
+        let jsonData = {};
+        jsonData['action'] = 'left';
+        socket.send(JSON.stringify(jsonData));
+    }
+    // Load the page.
     document.addEventListener('DOMContentLoaded', () => {
-        socket = new WebSocket('ws://127.0.0.1:8080/ws');
+        socket = new ReconnectingWebSocket('ws://127.0.0.1:8080/ws',null,{debug: true, reconnectInterval: 3000});
         socket.onopen = () => {
             console.log('Connected to the server');
         };
@@ -71,10 +93,85 @@ crossorigin="anonymous"></script>
         };
 
         socket.onmessage = msg =>{
-            console.log(msg);
+           
             let data = JSON.parse(msg.data);
-            console.log(data);
+            console.log("Action is",data.action);
+
+            switch (data.action){
+                case "list_users":
+                let ul = document.getElementById('online_users');
+                while(ul.firstChild){ul.removeChild(ul.firstChild);}
+                if (data.connected_users.length > 0){
+                    data.connected_users.forEach(user => {
+                        let li = document.createElement('li');
+                        li.appendChild(document.createTextNode(user));
+                        ul.appendChild(li);
+                    });
+                }
+                break;
+
+                case "broadcast":
+                 output.innerHTML += data.message + "<br>";
+                 break;
+            }
         }
+
+       
+        username.addEventListener('change',function() {
+            let jsonData ={}
+            jsonData['action'] = 'username';
+            jsonData['username'] = this.value;
+            socket.send(JSON.stringify(jsonData));
+        })
+
+        message.addEventListener('keydown',function(event){
+            if (event.code === 'Enter') {
+                if (!socket) {
+                    errorMessage('Connection is not established');
+                    return false;
+                }
+              
+              
+            if ((username.value === "") || (message.value === "")){ 
+               errorMessage('Username and message are required');
+                return false;
+            }else{
+            event.preventDefault();
+            event.stopPropagation();
+            sendMessage();
+                 }
+            }
+        });
+
+        document.getElementById('sendBtn').addEventListener('click',function(){
+            if ((username.value === "") || (message.value === "")){ 
+                errorMessage('Username and message are required');
+                return false;
+            }else{
+                sendMessage();
+                 }
+            });
     });
+
+    // Send message.
+    function sendMessage(){
+    
+        let jsonData = {};
+        jsonData['action'] = 'broadcast';
+        jsonData['username'] = username.value;
+        jsonData['message'] = message.value;
+
+        socket.send(JSON.stringify(jsonData));
+        document.getElementById('message').value = "";
+    }
+
+    // Error message.
+    function errorMessage (msg){
+        notie.alert({
+            type: 'error',
+            text: msg,
+            time: 3
+        });
+    }
 </script>
 </html>
