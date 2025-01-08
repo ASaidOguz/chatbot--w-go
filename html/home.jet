@@ -43,8 +43,12 @@
                 <hr>
                 <a href="javascript:void(0);" class="btn btn-outline-secondary" id="sendBtn">Send</a>
                 <input type="hidden" name="action" id="action">
-                <hr>
-                <div id="output" class="chatbox"></div>
+                
+                <div id="status" class="mt-2 float-end">
+                   
+                   
+                </div>
+                <div id="output" class="chatbox mt-3"></div>
             </div>
 
             <!-- Users Section -->
@@ -70,6 +74,7 @@ crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     let output = document.getElementById('output');
     let message = document.getElementById('message');
     let username = document.getElementById('username');
+    let statusDiv = document.getElementById('status');
     
     // When the user leaves the page.
     window.onbeforeunload = function(){
@@ -81,15 +86,22 @@ crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     // Load the page.
     document.addEventListener('DOMContentLoaded', () => {
         socket = new ReconnectingWebSocket('ws://127.0.0.1:8080/ws',null,{debug: true, reconnectInterval: 3000});
+        
+        const offline = `<span class="badge bg-danger">Offline</span>`;
+        const online = `<span class="badge bg-success">Online</span>`;
+
         socket.onopen = () => {
             console.log('Connected to the server');
+            statusDiv.innerHTML = online;
         };
         socket.onclose = () => {
             console.log('Disconnected from the server');
+            statusDiv.innerHTML = offline;
         };
 
         socket.onerror=()=>{
             console.log('Error in connection');
+            statusDiv.innerHTML = offline;
         };
 
         socket.onmessage = msg =>{
@@ -116,14 +128,14 @@ crossorigin="anonymous" referrerpolicy="no-referrer"></script>
             }
         }
 
-       
+        // Send username to the server. 
         username.addEventListener('change',function() {
             let jsonData ={}
             jsonData['action'] = 'username';
             jsonData['username'] = this.value;
             socket.send(JSON.stringify(jsonData));
         })
-
+        // Send message when the user presses enter.
         message.addEventListener('keydown',function(event){
             if (event.code === 'Enter') {
                 if (!socket) {
@@ -143,6 +155,7 @@ crossorigin="anonymous" referrerpolicy="no-referrer"></script>
             }
         });
 
+        // Send message when the user clicks the send button.
         document.getElementById('sendBtn').addEventListener('click',function(){
             if ((username.value === "") || (message.value === "")){ 
                 errorMessage('Username and message are required');
@@ -153,7 +166,7 @@ crossorigin="anonymous" referrerpolicy="no-referrer"></script>
             });
     });
 
-    // Send message.
+    // Send message. 
     function sendMessage(){
     
         let jsonData = {};
@@ -165,7 +178,7 @@ crossorigin="anonymous" referrerpolicy="no-referrer"></script>
         document.getElementById('message').value = "";
     }
 
-    // Error message.
+    // Error message. 
     function errorMessage (msg){
         notie.alert({
             type: 'error',

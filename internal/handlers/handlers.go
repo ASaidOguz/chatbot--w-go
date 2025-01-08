@@ -85,14 +85,17 @@ func WsEndPoint(w http.ResponseWriter, r *http.Request) {
 
 // listenForWs is a function that listens for incoming messages from a websocket connection.(private function)
 func listenForWs(conn *WebSocketConnection) {
+	// Recover from panic
 	defer func() {
 		if err := recover(); err != nil {
 			log.Default().Println("Error:", err)
 		}
 	}()
 
+	// WsPayload is a struct that represents a payload from a websocket connection.
 	var payLoad WsPayload
 
+	// Infinite loop to listen for incoming messages
 	for {
 		err := conn.ReadJSON(&payLoad)
 		if err != nil {
@@ -110,7 +113,10 @@ func ListenToWsChannel() {
 	var response WsJsonResponse
 
 	for {
+		// Listen for incoming messages.
 		e := <-wsChan
+
+		// Switch on the action that was received.
 		switch e.Action {
 		case "username":
 			clients[e.Conn] = e.UserName
@@ -134,6 +140,7 @@ func ListenToWsChannel() {
 	}
 }
 
+// getUserList is a function that returns a list of connected users.(private function)
 func getUserList() []string {
 	var userList []string
 	for _, v := range clients {
